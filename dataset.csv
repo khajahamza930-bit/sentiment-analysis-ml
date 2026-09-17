@@ -1,0 +1,31 @@
+text,sentiment
+"I love this product, it is amazing",positive
+"This is an excellent product",positive
+"I am very happy with the service",positive
+"The movie was fantastic",positive
+"I really enjoyed this experience",positive
+"The product works perfectly",positive
+"Great quality and excellent service",positive
+"I am satisfied with my purchase",positive
+"This is wonderful",positive
+"I highly recommend this product",positive
+"I hate this product",negative
+"This is a terrible product",negative
+"I am very disappointed with the service",negative
+"The movie was boring",negative
+"I did not enjoy this experience",negative
+"The product stopped working",negative
+"Very poor quality and bad service",negative
+"I regret buying this product",negative
+"This is awful",negative
+"I would not recommend this product",negative
+"The product arrived today",neutral
+"The service is available from Monday",neutral
+"I purchased this product yesterday",neutral
+"The movie starts at 7 PM",neutral
+"The package contains three items",neutral
+"The store is located in Hyderabad",neutral
+"I received my order this morning",neutral
+"The product costs 500 rupees",neutral
+"The meeting is scheduled for tomorrow",neutral
+"The phone has a 6.5 inch display",neutral
