@@ -1,45 +1,52 @@
 # 💬 Sentiment Analysis Using Machine Learning
 
-A machine learning-based Sentiment Analysis project that classifies text into **Positive, Negative, or Neutral** sentiment.
+A machine learning-based **Sentiment Analysis** project that classifies text into **Positive, Negative, or Neutral** sentiment.
+
+The project uses **Natural Language Processing (NLP)**, **TF-IDF feature extraction**, and **Logistic Regression**. A Streamlit web application provides an interactive interface where users can enter text and receive a sentiment prediction with its prediction probability.
+
+---
 
 ## 📌 Project Overview
 
-Sentiment Analysis is a Natural Language Processing (NLP) technique used to identify the emotional tone of text.
+Sentiment Analysis is an NLP technique used to identify the emotional tone or sentiment expressed in a piece of text.
 
-This project uses **TF-IDF (Term Frequency-Inverse Document Frequency)** for text feature extraction and **Logistic Regression** for sentiment classification.
+This project analyzes a sentence, review, or comment and classifies it into one of three categories:
 
-A simple **Streamlit web application** allows users to enter a sentence, review, or comment and receive a predicted sentiment with a confidence score.
+- 😊 Positive
+- 😐 Neutral
+- 😞 Negative
+
+The machine learning pipeline uses both **Word TF-IDF** and **Character TF-IDF** features. These features are combined and passed to a **Logistic Regression** classifier.
+
+---
 
 ## 🎯 Objectives
 
+- To understand Natural Language Processing and Sentiment Analysis.
 - To preprocess and analyze text data.
 - To convert text into numerical features using TF-IDF.
-- To train a supervised machine learning model.
+- To train a supervised machine learning classification model.
 - To classify text into Positive, Negative, or Neutral sentiment.
-- To build an interactive Streamlit web application.
-- To display the predicted sentiment and confidence score.
+- To evaluate the trained model using a separate test dataset.
+- To develop an interactive web application using Streamlit.
 
-## 🛠️ Technologies Used
+---
 
-- **Python**
-- **Pandas**
-- **NumPy**
-- **Scikit-learn**
-- **NLTK**
-- **Streamlit**
-- **TF-IDF**
-- **Logistic Regression**
+## 🧠 Machine Learning Approach
 
-## 📂 Project Structure
+The project follows this pipeline:
 
 ```text
-sentiment-analysis-ml/
-│
-├── app.py
-├── dataset.csv
-├── model.pkl
-├── vectorizer.pkl
-├── train_model.py
-├── requirements.txt
-├── .gitignore
-└── README.md
+User Input
+    ↓
+Text Processing
+    ↓
+Word TF-IDF + Character TF-IDF
+    ↓
+Feature Combination
+    ↓
+Logistic Regression
+    ↓
+Sentiment Prediction
+    ↓
+Positive / Neutral / Negative
