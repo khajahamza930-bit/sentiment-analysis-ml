@@ -28,25 +28,36 @@ The machine learning pipeline uses both **Word TF-IDF** and **Character TF-IDF**
 - To train a supervised machine learning classification model.
 - To classify text into Positive, Negative, or Neutral sentiment.
 - To evaluate the trained model using a separate test dataset.
-- To develop an interactive web application using Streamlit.
+- To develop an interactive Streamlit web application.
+- To display the predicted sentiment and prediction probability.
 
 ---
 
-## 🧠 Machine Learning Approach
+## 🛠️ Technologies Used
 
-The project follows this pipeline:
+- **Python**
+- **Pandas**
+- **NumPy**
+- **Scikit-learn**
+- **SciPy**
+- **NLTK**
+- **Streamlit**
+- **TF-IDF**
+- **Logistic Regression**
+
+---
+
+## 📂 Project Structure
 
 ```text
-User Input
-    ↓
-Text Processing
-    ↓
-Word TF-IDF + Character TF-IDF
-    ↓
-Feature Combination
-    ↓
-Logistic Regression
-    ↓
-Sentiment Prediction
-    ↓
-Positive / Neutral / Negative
+sentiment-analysis-ml/
+│
+├── app.py
+├── dataset.csv
+├── model.pkl
+├── word_vectorizer.pkl
+├── char_vectorizer.pkl
+├── train_final_model.py
+├── requirements.txt
+├── .gitignore
+└── README.md
