@@ -61,7 +61,7 @@ with st.sidebar:
     st.write("### Model")
 
     st.write("Logistic Regression")
-    st.write("Accuracy: 62.47%")
+    st.write("Accuracy: 62.81%")
 
 
 # ==============================
@@ -179,7 +179,7 @@ with col2:
     st.metric("Test Samples", "12,284")
 
 with col3:
-    st.metric("Model Accuracy", "62.47%")
+    st.metric("Model Accuracy", "62.81%")
 
 
 st.write("### 🤖 Machine Learning Model")
