@@ -1,131 +1,87 @@
-import pandas as pd
+"""
+train_final_model.py
+
+Trains a sentiment classifier (Positive / Negative / Neutral) on dataset.csv.
+Features: word TF-IDF + character TF-IDF, fed into Logistic Regression.
+Saves the model and both vectorizers as .pkl files for app.py to use.
+"""
+
 import pickle
 
+import pandas as pd
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+
+# Settings kept at the top so they are easy to change while experimenting
+DATASET_FILE = "dataset.csv"
+CHAR_WEIGHT = 1.2   # app.py must use the same value when predicting
+C_VALUE = 0.5
 
 
-# ==============================
-# 1. LOAD TRAINING DATA
-# ==============================
-
-train_data = pd.read_csv("dataset.csv")
-
-X_train = train_data["text"]
-y_train = train_data["sentiment"]
-
-print("Training dataset loaded successfully!")
-print("Training samples:", len(train_data))
+def load_data(path):
+    data = pd.read_csv(path)
+    print(f"Loaded {len(data)} training samples")
+    return data["text"], data["sentiment"]
 
 
-# ==============================
-# 2. WORD TF-IDF
-# ==============================
-
-print("\nCreating Word TF-IDF...")
-
-word_vectorizer = TfidfVectorizer(
-    lowercase=True,
-    ngram_range=(1, 2),
-    min_df=2,
-    max_features=30000
-)
-
-X_train_word = word_vectorizer.fit_transform(X_train)
-
-print("Word TF-IDF completed!")
-print("Word features:", len(word_vectorizer.get_feature_names_out()))
+def build_word_features(texts):
+    # Single words and word pairs ("not good") capture meaning and negation
+    vectorizer = TfidfVectorizer(
+        lowercase=True,
+        ngram_range=(1, 2),
+        min_df=2,
+        max_features=30000,
+    )
+    features = vectorizer.fit_transform(texts)
+    print(f"Word features: {features.shape[1]}")
+    return vectorizer, features
 
 
-# ==============================
-# 3. CHARACTER TF-IDF
-# ==============================
-
-print("\nCreating Character TF-IDF...")
-
-char_vectorizer = TfidfVectorizer(
-    lowercase=True,
-    analyzer="char",
-    ngram_range=(3, 5),
-    min_df=2,
-    max_features=50000
-)
-
-X_train_char = char_vectorizer.fit_transform(X_train)
-
-print("Character TF-IDF completed!")
-print("Character features:", len(char_vectorizer.get_feature_names_out()))
+def build_char_features(texts):
+    # Character n-grams help with spelling mistakes, slang and emojis
+    vectorizer = TfidfVectorizer(
+        lowercase=True,
+        analyzer="char",
+        ngram_range=(3, 5),
+        min_df=2,
+        max_features=50000,
+    )
+    features = vectorizer.fit_transform(texts)
+    print(f"Character features: {features.shape[1]}")
+    return vectorizer, features
 
 
-# ==============================
-# 4. COMBINE FEATURES
-# ==============================
-
-print("\nCombining Word and Character features...")
-
-X_train_combined = hstack([
-    X_train_word,
-    X_train_char * 1.2
-])
-
-print("Feature combination completed!")
+def train_model(features, labels):
+    # class_weight="balanced" stops the model from favouring Neutral,
+    # which has far more samples than Negative
+    model = LogisticRegression(C=C_VALUE, max_iter=2000, class_weight="balanced")
+    model.fit(features, labels)
+    return model
 
 
-# ==============================
-# 5. TRAIN LOGISTIC REGRESSION
-# ==============================
-
-print("\nTraining Logistic Regression model...")
-
-model = LogisticRegression(
-    C=0.5,
-    max_iter=2000,
-    class_weight="balanced"
-)
-
-model.fit(X_train_combined, y_train)
-
-print("Model training completed!")
+def save_file(obj, filename):
+    with open(filename, "wb") as f:
+        pickle.dump(obj, f)
 
 
-# ==============================
-# 6. SAVE MODEL
-# ==============================
+def main():
+    texts, labels = load_data(DATASET_FILE)
 
-print("\nSaving final model files...")
+    word_vectorizer, word_features = build_word_features(texts)
+    char_vectorizer, char_features = build_char_features(texts)
 
-with open("model.pkl", "wb") as file:
-    pickle.dump(model, file)
+    # Join both feature sets side by side into one matrix
+    combined = hstack([word_features, char_features * CHAR_WEIGHT])
 
-with open("word_vectorizer.pkl", "wb") as file:
-    pickle.dump(word_vectorizer, file)
+    print("Training model...")
+    model = train_model(combined, labels)
 
-with open("char_vectorizer.pkl", "wb") as file:
-    pickle.dump(char_vectorizer, file)
+    save_file(model, "model.pkl")
+    save_file(word_vectorizer, "word_vectorizer.pkl")
+    save_file(char_vectorizer, "char_vectorizer.pkl")
+    print("Done! Saved model.pkl, word_vectorizer.pkl, char_vectorizer.pkl")
 
 
-# ==============================
-# 7. FINISHED
-# ==============================
-
-print("\n==========================================")
-print("FINAL MODEL CREATED SUCCESSFULLY!")
-print("==========================================")
-
-print("\nFiles saved:")
-print("1. model.pkl")
-print("2. word_vectorizer.pkl")
-print("3. char_vectorizer.pkl")
-
-print("\nFinal configuration:")
-print("Word TF-IDF: 1-2 grams")
-print("Word features: 30,000")
-print("Character TF-IDF: 3-5 grams")
-print("Character features: 50,000")
-print("Character weight: 1.2")
-print("Logistic Regression C: 0.5")
-print("Class weight: balanced")
-
-print("\nTraining completed successfully! 🎉")
+if __name__ == "__main__":
+    main()
