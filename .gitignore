@@ -1,5 +1,6 @@
 ﻿# Python virtual environments
 venv/
+test_env/
 .venv/
 
 # Python cache files
@@ -12,5 +13,11 @@ __pycache__/
 .ruff_cache/
 .coverage
 
-# Local environment variables
+# Local secrets and environment variables
 .env
+.streamlit/secrets.toml
+
+# Editor and operating system files
+.vscode/
+.DS_Store
+Thumbs.db

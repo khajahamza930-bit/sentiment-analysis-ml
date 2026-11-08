@@ -1,42 +1,28 @@
 # 💬 Sentiment Analysis Using Machine Learning
 
-## 📌 Project Overview
+A web app that reads a piece of text and predicts whether its sentiment is **Positive**, **Neutral** or **Negative**. It uses TF-IDF features and a Logistic Regression model, with a Streamlit interface on top.
 
-This project is a **Sentiment Analysis application** that uses Natural Language Processing (NLP) and Machine Learning to classify text into three sentiment categories:
-
-* 😊 Positive
-* 😐 Neutral
-* 😞 Negative
-
-The application allows users to enter a sentence, review, comment, or feedback and automatically predicts its sentiment using a trained Machine Learning model.
-
-The project is developed using **Python, Scikit-learn, TF-IDF, Logistic Regression, and Streamlit**.
+![App screenshot](screenshot.png)
 
 ---
 
-## 🎯 Objectives
+## ✨ Features
 
-* Analyze the sentiment of text automatically.
-* Classify text into Positive, Negative, or Neutral.
-* Apply Natural Language Processing techniques.
-* Use TF-IDF for text feature extraction.
-* Train a Machine Learning classification model.
-* Build an interactive web interface using Streamlit.
-* Demonstrate a practical application of Machine Learning and NLP.
+- Classifies text into 3 classes: 😊 Positive, 😐 Neutral, 😞 Negative
+- Shows the confidence of the prediction and the probability of every class
+- Quick example sentences to try the app immediately
+- Dark, modern interface built with Streamlit and custom CSS
 
 ---
 
-## 🛠️ Technologies Used
+## 🛠️ Tech Stack
 
-* Python
-* Pandas
-* NumPy
-* Scikit-learn
-* NLTK / Text Processing
-* TF-IDF
-* Logistic Regression
-* Streamlit
-* SciPy
+| Area | Tools |
+| ---- | ----- |
+| Language | Python |
+| Data handling | Pandas, NumPy, SciPy |
+| Machine learning | Scikit-learn (TF-IDF, Logistic Regression) |
+| Web app | Streamlit, custom CSS |
 
 ---
 
@@ -45,190 +31,128 @@ The project is developed using **Python, Scikit-learn, TF-IDF, Logistic Regressi
 ```text
 Sentiment_Analysis_Project/
 │
-├── app.py
-├── dataset.csv
-├── model.pkl
-├── word_vectorizer.pkl
-├── char_vectorizer.pkl
-├── train_final_model.py
-├── requirements.txt
-├── README.md
-└── .gitignore
+├── app.py                  # Streamlit web app
+├── style.css               # Styling for the app
+├── train_final_model.py    # Trains the model and saves the .pkl files
+├── dataset.csv             # Training data (text + sentiment)
+├── model.pkl               # Trained Logistic Regression model
+├── word_vectorizer.pkl     # Word-level TF-IDF vectorizer
+├── char_vectorizer.pkl     # Character-level TF-IDF vectorizer
+├── requirements.txt        # Python packages
+└── README.md
 ```
 
 ---
 
-## 🤖 Machine Learning Approach
+## 🤖 How It Works
 
-The project uses **TF-IDF (Term Frequency-Inverse Document Frequency)** to convert text into numerical features.
+1. **Text to numbers.** A model can't read words, so the text is converted into numbers with two TF-IDF vectorizers:
+   - **Word TF-IDF:** single words and word pairs (1–2 grams, up to 30,000 features). This captures meaning such as "not good".
+   - **Character TF-IDF:** groups of 3–5 characters (up to 50,000 features). This helps with spelling mistakes, slang and emojis.
+2. **Combine the features.** Both feature sets are joined side by side. The character features are multiplied by a weight of `1.2`.
+3. **Classify.** A Logistic Regression model (`C=0.25`, `class_weight="balanced"`, `max_iter=2000`) predicts the sentiment and gives a probability for each class.
 
-Two types of TF-IDF features are used:
-
-### 1. Word TF-IDF
-
-* N-gram range: `(1, 2)`
-* Minimum document frequency: `2`
-* Maximum features: `30,000`
-
-### 2. Character TF-IDF
-
-* Character analyzer
-* N-gram range: `(3, 5)`
-* Minimum document frequency: `2`
-* Maximum features: `50,000`
-
-The Word and Character features are combined before being passed to the Machine Learning model.
-
-### Machine Learning Model
-
-**Logistic Regression**
-
-* C value: `0.25`
-* Class weight: `balanced`
-* Maximum iterations: `2000`
+`class_weight="balanced"` is used because the data is uneven: Neutral has far more samples than Negative, and without balancing the model would favour Neutral.
 
 ---
 
 ## 📊 Dataset
 
-The project uses the **TweetEval Sentiment dataset**.
+The model is trained on the [TweetEval](https://github.com/cardiffnlp/tweeteval) sentiment dataset (tweets labelled Positive, Neutral or Negative) from Cardiff NLP.
 
-### Training Dataset
+| Split | Samples |
+| ----- | ------: |
+| Training | 45,615 |
+| Test | 12,284 |
 
-* Total training samples: **45,615**
-
-### Test Dataset
-
-* Total test samples: **12,284**
-
-### Sentiment Classes
-
-| Label | Sentiment |
-| ----- | --------- |
-| 0     | Negative  |
-| 1     | Neutral   |
-| 2     | Positive  |
+Training class distribution: Neutral 20,673 · Positive 17,849 · Negative 7,093
 
 ---
 
-## 📈 Model Performance
+## 📈 Results
 
-The final verified model achieved:
+**Test accuracy: 62.81%** (on 12,284 test samples)
 
-### **Test Accuracy: 62.81%**
+| Sentiment | Precision | Recall | F1-score | Support |
+| --------- | --------: | -----: | -------: | ------: |
+| Negative | 58.52% | 71.95% | 64.54% | 3,972 |
+| Neutral | 68.58% | 56.70% | 62.07% | 5,937 |
+| Positive | 59.87% | 62.82% | 61.31% | 2,375 |
 
-Classification results:
+I tested different values of the regularization parameter `C`, and `C = 0.25` gave the best accuracy:
 
-| Sentiment | Precision | Recall | F1-Score |
-| --------- | --------: | -----: | -------: |
-| Negative  |    58.52% | 71.95% |   64.54% |
-| Neutral   |    68.58% | 56.70% |   62.07% |
-| Positive  |    59.87% | 62.82% |   61.31% |
+| C | Test accuracy |
+| -: | ------------: |
+| 0.25 | 62.81% |
+| 0.5 | 62.39% |
+| 0.75 | 62.04% |
+| 1.0 | 61.70% |
 
-The model was evaluated on **12,284 test samples**.
-
----
-
-## 🌐 Streamlit Application
-
-The project includes an interactive **Streamlit web application**.
-
-Users can:
-
-1. Enter text.
-2. Click **Analyze Sentiment**.
-3. Receive the predicted sentiment.
-4. View the prediction probability.
-
-Example:
-
-```text
-Input:
-The product is excellent and easy to use.
-
-Output:
-😊 POSITIVE
-```
+This is a classical machine learning baseline. Sentiment on short, informal tweets is hard (sarcasm, slang, mixed feelings), so neural models such as transformers would likely score higher.
 
 ---
 
-## 📦 Installation
+## 🚀 Getting Started
 
-Clone the repository and install the required libraries.
+**Requirements:** Python 3.11 or newer
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/<your-username>/<your-repo-name>.git
+cd <your-repo-name>
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+venv\Scripts\activate          # Windows
+# source venv/bin/activate     # macOS / Linux
+
+# 3. Install the packages
 pip install -r requirements.txt
-```
 
----
-
-## ▶️ Running the Application
-
-Run the Streamlit application using:
-
-```bash
+# 4. Run the app
 streamlit run app.py
 ```
 
-The application will open in your web browser.
+The app opens in your browser, usually at `http://localhost:8501`.
 
----
+### Retrain the model (optional)
 
-## 🧠 Training the Model
-
-To train the Machine Learning model:
+The trained `.pkl` files are already included. To train again from `dataset.csv`:
 
 ```bash
 python train_final_model.py
 ```
 
-The trained model and TF-IDF vectorizers are saved as `.pkl` files.
+This overwrites `model.pkl`, `word_vectorizer.pkl` and `char_vectorizer.pkl`.
 
 ---
 
-## 💡 Applications
+## 💡 Example
 
-Sentiment Analysis can be used for:
-
-* Product reviews
-* Movie reviews
-* Customer feedback
-* Social media analysis
-* Online surveys
-* Customer support
-* Business intelligence
-* Feedback analysis
+```text
+Input:   The product is excellent and easy to use.
+Output:  😊 POSITIVE
+```
 
 ---
 
-## 🚀 Future Scope
+## 🔮 Future Improvements
 
-The project can be improved in the future by:
-
-* Using larger datasets.
-* Supporting multiple languages.
-* Using advanced NLP techniques.
-* Adding real-time social media analysis.
-* Comparing multiple Machine Learning models.
-* Adding sentiment analytics and visualizations.
-* Improving model accuracy.
+- Compare more models (Naive Bayes, SVM, transformer models)
+- Support more languages
+- Add charts and sentiment analytics
+- Analyze many texts at once by uploading a CSV file
+- Improve accuracy on sarcasm and mixed sentiment
 
 ---
 
-## 👨‍💻 Project Information
+## 👨‍💻 Author
 
-**Project:** Sentiment Analysis Using Machine Learning
-
-**Technology:** Python, NLP, Machine Learning, Streamlit
-
-**Model:** Logistic Regression
-
-**Feature Extraction:** Word + Character TF-IDF
-
-**Test Accuracy:** **62.81%**
+**<Your Name>**
+B.Tech CSE (AIML), Nawab Shah Alam Khan College of Engineering and Technology
 
 ---
 
 ## 📄 License
 
-This project is created for educational and academic purposes.
+This project is for educational purposes. See the `LICENSE` file for details.
