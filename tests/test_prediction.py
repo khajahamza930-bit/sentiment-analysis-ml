@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from scipy.sparse import hstack
 
-
 BASE_DIR = Path(__file__).resolve().parents[1]
 
 VALID_LABELS = {"positive", "negative", "neutral"}

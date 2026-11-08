@@ -1,8 +1,8 @@
-import streamlit as st
 import time
 
-from predictor import load_model_files, predict_sentiment
+import streamlit as st
 
+from predictor import load_model_files, predict_sentiment
 
 # =========================================================
 # PAGE CONFIGURATION

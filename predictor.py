@@ -5,7 +5,6 @@ from pathlib import Path
 
 from scipy.sparse import hstack
 
-
 CHAR_WEIGHT = 1.2
 PROJECT_DIR = Path(__file__).resolve().parent
 

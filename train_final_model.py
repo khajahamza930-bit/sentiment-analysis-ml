@@ -18,7 +18,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-
 # Model settings
 DATASET_FILE = "dataset.csv"
 
