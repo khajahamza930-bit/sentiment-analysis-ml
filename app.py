@@ -1,7 +1,7 @@
 import streamlit as st
-import pickle
-from scipy.sparse import hstack
 import time
+
+from predictor import load_model_files, predict_sentiment
 
 
 # =========================================================
@@ -1268,17 +1268,7 @@ st.markdown(
 
 @st.cache_resource
 def load_model():
-
-    with open("model.pkl", "rb") as file:
-        model = pickle.load(file)
-
-    with open("word_vectorizer.pkl", "rb") as file:
-        word_vectorizer = pickle.load(file)
-
-    with open("char_vectorizer.pkl", "rb") as file:
-        char_vectorizer = pickle.load(file)
-
-    return model, word_vectorizer, char_vectorizer
+    return load_model_files()
 
 
 model, word_vectorizer, char_vectorizer = load_model()
@@ -1376,7 +1366,7 @@ with st.sidebar:
                 <div class="model-stat">
 
                     <div class="model-value">
-                        62.81%
+
                     </div>
 
                     <div class="model-label">
@@ -1431,22 +1421,6 @@ with st.sidebar:
 
                 <div class="developer-roll">
                     Roll No: 161024748302
-                </div>
-
-            </div>
-
-
-            <div class="developer-divider"></div>
-
-
-            <div class="developer-person">
-
-                <div class="developer-name">
-                    Mohammed Wali Uddin
-                </div>
-
-                <div class="developer-roll">
-                    Roll No: 161024748305
                 </div>
 
             </div>
@@ -1579,76 +1553,11 @@ if analyze:
             time.sleep(0.8)
 
 
-            # ---------------------------------------------
-            # WORD TF-IDF
-            # ---------------------------------------------
-
-            word_features = word_vectorizer.transform(
-                [text]
-            )
-
-
-            # ---------------------------------------------
-            # CHARACTER TF-IDF
-            # ---------------------------------------------
-
-            char_features = char_vectorizer.transform(
-                [text]
-            )
-
-
-            # ---------------------------------------------
-            # COMBINE FEATURES
-            # ---------------------------------------------
-
-            combined_features = hstack(
-                [
-                    word_features,
-                    char_features * 1.2
-                ]
-            )
-
-
-            # ---------------------------------------------
-            # PREDICTION
-            # ---------------------------------------------
-
-            prediction = model.predict(
-                combined_features
-            )[0]
-
-
-            # ---------------------------------------------
-            # PROBABILITIES
-            # ---------------------------------------------
-
-            probabilities = model.predict_proba(
-                combined_features
-            )[0]
-
-
-            # ---------------------------------------------
-            # CLASSES
-            # ---------------------------------------------
-
-            classes = model.classes_
-
-
-            probability_dict = {
-                cls: prob * 100
-                for cls, prob in zip(
-                    classes,
-                    probabilities
-                )
-            }
-
-
-            # ---------------------------------------------
-            # CONFIDENCE
-            # ---------------------------------------------
-
-            confidence = (
-                max(probabilities) * 100
+            prediction, probability_dict, confidence = predict_sentiment(
+                text,
+                model,
+                word_vectorizer,
+                char_vectorizer,
             )
 
 

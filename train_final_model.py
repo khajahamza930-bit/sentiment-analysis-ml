@@ -1,131 +1,253 @@
-import pandas as pd
+﻿"""
+Sentiment Analysis - Model Training
+
+Combines word-level and character-level TF-IDF features
+and trains a Logistic Regression classifier.
+"""
+
 import pickle
 
+import pandas as pd
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
-
-
-# ==============================
-# 1. LOAD TRAINING DATA
-# ==============================
-
-train_data = pd.read_csv("dataset.csv")
-
-X_train = train_data["text"]
-y_train = train_data["sentiment"]
-
-print("Training dataset loaded successfully!")
-print("Training samples:", len(train_data))
-
-
-# ==============================
-# 2. WORD TF-IDF
-# ==============================
-
-print("\nCreating Word TF-IDF...")
-
-word_vectorizer = TfidfVectorizer(
-    lowercase=True,
-    ngram_range=(1, 2),
-    min_df=2,
-    max_features=30000
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
 )
-
-X_train_word = word_vectorizer.fit_transform(X_train)
-
-print("Word TF-IDF completed!")
-print("Word features:", len(word_vectorizer.get_feature_names_out()))
+from sklearn.model_selection import train_test_split
 
 
-# ==============================
-# 3. CHARACTER TF-IDF
-# ==============================
+# Model settings
+DATASET_FILE = "dataset.csv"
 
-print("\nCreating Character TF-IDF...")
+CHAR_WEIGHT = 1.2
+C_VALUE = 0.5
+TEST_SIZE = 0.20
+RANDOM_STATE = 42
 
-char_vectorizer = TfidfVectorizer(
-    lowercase=True,
-    analyzer="char",
-    ngram_range=(3, 5),
-    min_df=2,
-    max_features=50000
-)
-
-X_train_char = char_vectorizer.fit_transform(X_train)
-
-print("Character TF-IDF completed!")
-print("Character features:", len(char_vectorizer.get_feature_names_out()))
+WORD_MAX_FEATURES = 30000
+CHAR_MAX_FEATURES = 50000
 
 
-# ==============================
-# 4. COMBINE FEATURES
-# ==============================
+def load_data(path):
+    """Load text and sentiment labels from the dataset."""
 
-print("\nCombining Word and Character features...")
+    data = pd.read_csv(path)
+    data = data.dropna(subset=["text", "sentiment"])
 
-X_train_combined = hstack([
-    X_train_word,
-    X_train_char * 1.2
-])
+    texts = data["text"].astype(str)
+    labels = data["sentiment"].astype(str).str.lower()
 
-print("Feature combination completed!")
+    print(f"Total records: {len(data)}")
+    print("\nSentiment distribution:")
+    print(labels.value_counts())
 
-
-# ==============================
-# 5. TRAIN LOGISTIC REGRESSION
-# ==============================
-
-print("\nTraining Logistic Regression model...")
-
-model = LogisticRegression(
-    C=0.5,
-    max_iter=2000,
-    class_weight="balanced"
-)
-
-model.fit(X_train_combined, y_train)
-
-print("Model training completed!")
+    return texts, labels
 
 
-# ==============================
-# 6. SAVE MODEL
-# ==============================
+def build_word_vectorizer():
+    """Create the word-level TF-IDF vectorizer."""
 
-print("\nSaving final model files...")
-
-with open("model.pkl", "wb") as file:
-    pickle.dump(model, file)
-
-with open("word_vectorizer.pkl", "wb") as file:
-    pickle.dump(word_vectorizer, file)
-
-with open("char_vectorizer.pkl", "wb") as file:
-    pickle.dump(char_vectorizer, file)
+    return TfidfVectorizer(
+        lowercase=True,
+        ngram_range=(1, 2),
+        min_df=2,
+        max_features=WORD_MAX_FEATURES,
+    )
 
 
-# ==============================
-# 7. FINISHED
-# ==============================
+def build_char_vectorizer():
+    """Create the character-level TF-IDF vectorizer."""
 
-print("\n==========================================")
-print("FINAL MODEL CREATED SUCCESSFULLY!")
-print("==========================================")
+    return TfidfVectorizer(
+        lowercase=True,
+        analyzer="char",
+        ngram_range=(3, 5),
+        min_df=2,
+        max_features=CHAR_MAX_FEATURES,
+    )
 
-print("\nFiles saved:")
-print("1. model.pkl")
-print("2. word_vectorizer.pkl")
-print("3. char_vectorizer.pkl")
 
-print("\nFinal configuration:")
-print("Word TF-IDF: 1-2 grams")
-print("Word features: 30,000")
-print("Character TF-IDF: 3-5 grams")
-print("Character features: 50,000")
-print("Character weight: 1.2")
-print("Logistic Regression C: 0.5")
-print("Class weight: balanced")
+def build_features(word_vectorizer, char_vectorizer, texts, fit=False):
+    """
+    Convert text into combined word and character TF-IDF features.
 
-print("\nTraining completed successfully! 🎉")
+    Fit the vectorizers when training. Otherwise, use their
+    existing vocabulary to transform new text.
+    """
+
+    if fit:
+        word_features = word_vectorizer.fit_transform(texts)
+        char_features = char_vectorizer.fit_transform(texts)
+    else:
+        word_features = word_vectorizer.transform(texts)
+        char_features = char_vectorizer.transform(texts)
+
+    return hstack([
+        word_features,
+        char_features * CHAR_WEIGHT,
+    ])
+
+
+def create_model():
+    """Create the Logistic Regression classifier."""
+
+    return LogisticRegression(
+        C=C_VALUE,
+        max_iter=2000,
+        class_weight="balanced",
+    )
+
+
+def evaluate_model(model, test_features, y_test, class_labels):
+    """Evaluate the model and save its performance report."""
+
+    predictions = model.predict(test_features)
+
+    accuracy = accuracy_score(y_test, predictions)
+
+    report = classification_report(
+        y_test,
+        predictions,
+        labels=class_labels,
+        zero_division=0,
+    )
+
+    matrix = confusion_matrix(
+        y_test,
+        predictions,
+        labels=class_labels,
+    )
+
+    confusion_df = pd.DataFrame(
+        matrix,
+        index=class_labels,
+        columns=class_labels,
+    )
+
+    print("\n========== MODEL EVALUATION ==========")
+    print(f"\nAccuracy: {accuracy * 100:.2f}%")
+
+    print("\nClassification Report:")
+    print(report)
+
+    print("Confusion Matrix:")
+    print(confusion_df)
+
+    report_text = (
+        "SENTIMENT ANALYSIS MODEL EVALUATION\n"
+        "===================================\n\n"
+        f"Accuracy: {accuracy * 100:.2f}%\n\n"
+        "Classification Report:\n"
+        f"{report}\n"
+        "Confusion Matrix:\n"
+        f"{confusion_df}\n"
+    )
+
+    with open("model_evaluation.txt", "w", encoding="utf-8") as file:
+        file.write(report_text)
+
+    return accuracy
+
+
+def save_file(obj, filename):
+    """Save a trained model or vectorizer as a pickle file."""
+
+    with open(filename, "wb") as file:
+        pickle.dump(obj, file)
+
+    print(f"Saved: {filename}")
+
+
+def main():
+    """Run model evaluation and train the final deployment model."""
+
+    # Load the dataset
+    texts, labels = load_data(DATASET_FILE)
+    class_labels = sorted(labels.unique())
+
+    # Keep a separate test set for evaluation
+    X_train, X_test, y_train, y_test = train_test_split(
+        texts,
+        labels,
+        test_size=TEST_SIZE,
+        random_state=RANDOM_STATE,
+        stratify=labels,
+    )
+
+    print("\nTraining samples:", len(X_train))
+    print("Testing samples:", len(X_test))
+
+    # Train the evaluation model using only training data
+    print("\nBuilding training features...")
+
+    word_vectorizer = build_word_vectorizer()
+    char_vectorizer = build_char_vectorizer()
+
+    train_features = build_features(
+        word_vectorizer,
+        char_vectorizer,
+        X_train,
+        fit=True,
+    )
+
+    print("Training feature shape:", train_features.shape)
+
+    print("\nTraining evaluation model...")
+
+    evaluation_model = create_model()
+    evaluation_model.fit(train_features, y_train)
+
+    # Transform test data using the fitted vectorizers
+    print("\nPreparing test features...")
+
+    test_features = build_features(
+        word_vectorizer,
+        char_vectorizer,
+        X_test,
+    )
+
+    evaluate_model(
+        evaluation_model,
+        test_features,
+        y_test,
+        class_labels,
+    )
+
+    # Train the final model using the complete dataset
+    print("\n========== FINAL MODEL TRAINING ==========")
+    print("Building features using all dataset records...")
+
+    final_word_vectorizer = build_word_vectorizer()
+    final_char_vectorizer = build_char_vectorizer()
+
+    final_features = build_features(
+        final_word_vectorizer,
+        final_char_vectorizer,
+        texts,
+        fit=True,
+    )
+
+    print("Final feature shape:", final_features.shape)
+
+    print("\nTraining final model on all records...")
+
+    final_model = create_model()
+    final_model.fit(final_features, labels)
+
+    # Save the final model and vectorizers
+    save_file(final_model, "model.pkl")
+    save_file(final_word_vectorizer, "word_vectorizer.pkl")
+    save_file(final_char_vectorizer, "char_vectorizer.pkl")
+
+    print("\n========== TRAINING COMPLETED ==========")
+    print("Evaluation report: model_evaluation.txt")
+    print("Final model: model.pkl")
+    print("Word vectorizer: word_vectorizer.pkl")
+    print("Character vectorizer: char_vectorizer.pkl")
+
+
+if __name__ == "__main__":
+    main()
