@@ -1,1270 +1,24 @@
-import time
+from __future__ import annotations
 
+import html
+from datetime import datetime
+
+import pandas as pd
 import streamlit as st
 
 from predictor import load_model_files, predict_sentiment
 
-# =========================================================
-# PAGE CONFIGURATION
-# =========================================================
-
 st.set_page_config(
-    page_title="Sentiment AI",
-    page_icon="💬",
+    page_title="Sentiment AI | Intelligence Workspace",
+    page_icon="✳",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
+CSS_PATH = "style.css"
+with open(CSS_PATH, encoding="utf-8") as css_file:
+    st.html(f"<style>{css_file.read()}</style>")
 
-# =========================================================
-# CUSTOM CSS
-# =========================================================
-
-st.markdown(
-    """
-    <style>
-
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-    html,
-    body,
-    [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-
-    /* =====================================================
-       MAIN BACKGROUND
-       ===================================================== */
-
-    .stApp {
-        background-image:
-            linear-gradient(
-                rgba(148,163,184,0.035) 1px,
-                transparent 1px
-            ),
-            linear-gradient(
-                90deg,
-                rgba(148,163,184,0.035) 1px,
-                transparent 1px
-            ),
-            radial-gradient(
-                circle at 10% 10%,
-                rgba(99,102,241,0.16),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 90% 20%,
-                rgba(168,85,247,0.14),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 50% 100%,
-                rgba(14,165,233,0.10),
-                transparent 35%
-            ),
-            #0b1020;
-
-        background-size:
-            42px 42px,
-            42px 42px,
-            auto,
-            auto,
-            auto,
-            auto;
-
-        animation: gridDrift 24s linear infinite;
-    }
-
-    @keyframes gridDrift {
-        from {
-            background-position:
-                0 0,
-                0 0,
-                0 0,
-                0 0,
-                0 0;
-        }
-
-        to {
-            background-position:
-                42px 42px,
-                42px 42px,
-                0 0,
-                0 0,
-                0 0;
-        }
-    }
-
-
-    /* =====================================================
-       ANIMATED GLOW
-       ===================================================== */
-
-    .stApp::before {
-        content: "";
-
-        position: fixed;
-
-        width: 450px;
-        height: 450px;
-
-        border-radius: 50%;
-
-        background: rgba(99,102,241,0.10);
-
-        filter: blur(90px);
-
-        top: 5%;
-        left: -150px;
-
-        animation: floatGlow 7s ease-in-out infinite;
-
-        pointer-events: none;
-    }
-
-    .stApp::after {
-        content: "";
-
-        position: fixed;
-
-        width: 400px;
-        height: 400px;
-
-        border-radius: 50%;
-
-        background: rgba(168,85,247,0.10);
-
-        filter: blur(90px);
-
-        bottom: 0;
-        right: -120px;
-
-        animation: floatGlow2 8s ease-in-out infinite;
-
-        pointer-events: none;
-    }
-
-    @keyframes floatGlow {
-
-        0%,
-        100% {
-            transform: translateY(0px);
-        }
-
-        50% {
-            transform: translateY(35px);
-        }
-    }
-
-    @keyframes floatGlow2 {
-
-        0%,
-        100% {
-            transform: translateY(0px);
-        }
-
-        50% {
-            transform: translateY(-35px);
-        }
-    }
-
-
-    /* =====================================================
-       HERO
-       ===================================================== */
-
-    .hero {
-        text-align: center;
-
-        padding: 46px 20px 20px 20px;
-
-        animation: fadeIn 1s ease;
-
-        position: relative;
-    }
-
-    .hero-badge {
-        display: inline-block;
-
-        padding: 8px 18px;
-
-        border-radius: 30px;
-
-        background: rgba(99,102,241,0.15);
-
-        border: 1px solid rgba(129,140,248,0.35);
-
-        color: #c7d2fe;
-
-        font-size: 14px;
-
-        font-weight: 600;
-
-        margin-bottom: 18px;
-
-        letter-spacing: .12em;
-
-        text-transform: uppercase;
-
-        box-shadow:
-            0 0 30px rgba(99,102,241,.12);
-
-        animation:
-            badgePulse 3.5s ease-in-out infinite;
-    }
-
-    .hero h1 {
-        font-size: 48px;
-
-        font-weight: 800;
-
-        margin: 0;
-
-        background:
-            linear-gradient(
-                90deg,
-                #ffffff,
-                #a5b4fc,
-                #e9d5ff
-            );
-
-        -webkit-background-clip: text;
-
-        -webkit-text-fill-color: transparent;
-
-        text-shadow:
-            0 0 35px rgba(129,140,248,.12);
-    }
-
-    .hero p {
-        color: #aab3cf;
-
-        font-size: 18px;
-
-        margin-top: 12px;
-    }
-
-    @keyframes fadeIn {
-
-        from {
-            opacity: 0;
-            transform: translateY(15px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    @keyframes badgePulse {
-
-        0%,
-        100% {
-            box-shadow:
-                0 0 0 rgba(99,102,241,0);
-        }
-
-        50% {
-            box-shadow:
-                0 0 32px rgba(99,102,241,.22);
-        }
-    }
-
-
-    /* =====================================================
-       GLASS CARDS
-       ===================================================== */
-
-    .card,
-    .result,
-    .metric-card {
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(15,23,42,.82),
-                rgba(17,24,39,.62)
-            );
-
-        border:
-            1px solid rgba(148,163,184,.16);
-
-        box-shadow:
-            0 20px 55px rgba(0,0,0,.24),
-            inset 0 1px 0 rgba(255,255,255,.035);
-
-        backdrop-filter: blur(18px);
-    }
-
-    .card {
-
-        position: relative;
-
-        overflow: hidden;
-
-        border-radius: 20px;
-
-        padding: 25px;
-
-        margin-bottom: 20px;
-    }
-
-    .card::before {
-
-        content: "";
-
-        position: absolute;
-
-        left: -20%;
-
-        top: 0;
-
-        width: 140%;
-
-        height: 1px;
-
-        background:
-            linear-gradient(
-                90deg,
-                transparent,
-                rgba(124,58,237,.75),
-                rgba(6,182,212,.55),
-                transparent
-            );
-
-        animation:
-            scanLine 5s ease-in-out infinite;
-    }
-
-    @keyframes scanLine {
-
-        0%,
-        100% {
-            transform: translateX(-25%);
-            opacity: .35;
-        }
-
-        50% {
-            transform: translateX(25%);
-            opacity: 1;
-        }
-    }
-
-
-    /* =====================================================
-       TEXT AREA
-       ===================================================== */
-
-    textarea {
-
-        background:
-            rgba(15,23,42,0.85) !important;
-
-        color: white !important;
-
-        border:
-            1px solid rgba(129,140,248,0.35) !important;
-
-        border-radius:
-            15px !important;
-
-        transition:
-            border-color .25s ease,
-            box-shadow .25s ease,
-            transform .25s ease !important;
-    }
-
-    textarea:focus {
-
-        border-color:
-            rgba(129,140,248,.8) !important;
-
-        box-shadow:
-            0 0 0 1px rgba(129,140,248,.28),
-            0 0 28px rgba(99,102,241,.12) !important;
-    }
-
-
-    /* =====================================================
-       ANALYZE BUTTON
-       ===================================================== */
-
-    .stButton > button {
-
-        width: 100%;
-
-        border-radius: 14px;
-
-        border: none;
-
-        padding: 14px;
-
-        font-size: 17px;
-
-        font-weight: 700;
-
-        color: white;
-
-        background:
-            linear-gradient(
-                100deg,
-                #6366f1,
-                #7c3aed,
-                #06b6d4,
-                #7c3aed,
-                #6366f1
-            );
-
-        background-size: 300% 100%;
-
-        box-shadow:
-            0 8px 25px rgba(99,102,241,0.30);
-
-        transition: all 0.25s ease;
-
-        animation:
-            buttonFlow 7s ease infinite;
-
-        position: relative;
-
-        overflow: hidden;
-    }
-
-    .stButton > button:hover {
-
-        transform: translateY(-3px);
-
-        box-shadow:
-            0 12px 35px rgba(139,92,246,0.45);
-    }
-
-    .stButton > button::after {
-
-        content: "";
-
-        position: absolute;
-
-        top: 0;
-
-        left: -120%;
-
-        width: 70%;
-
-        height: 100%;
-
-        background:
-            linear-gradient(
-                90deg,
-                transparent,
-                rgba(255,255,255,.18),
-                transparent
-            );
-
-        transform: skewX(-18deg);
-
-        animation:
-            buttonShine 4.5s ease-in-out infinite;
-    }
-
-    @keyframes buttonFlow {
-
-        0%,
-        100% {
-            background-position: 0% 50%;
-        }
-
-        50% {
-            background-position: 100% 50%;
-        }
-    }
-
-    @keyframes buttonShine {
-
-        0%,
-        55% {
-            left: -120%;
-        }
-
-        75%,
-        100% {
-            left: 150%;
-        }
-    }
-
-
-    /* =====================================================
-       RESULT
-       ===================================================== */
-
-    .result {
-
-        text-align: center;
-
-        padding: 30px;
-
-        border-radius: 22px;
-
-        animation:
-            resultAppear 0.7s ease;
-
-        position: relative;
-
-        overflow: hidden;
-    }
-
-    .result::after {
-
-        content: "";
-
-        position: absolute;
-
-        inset: 0;
-
-        background:
-            linear-gradient(
-                115deg,
-                transparent 35%,
-                rgba(255,255,255,.045) 50%,
-                transparent 65%
-            );
-
-        transform:
-            translateX(-120%);
-
-        animation:
-            resultSweep 3.8s ease-in-out infinite;
-
-        pointer-events: none;
-    }
-
-    @keyframes resultAppear {
-
-        from {
-            opacity: 0;
-            transform: scale(0.94);
-        }
-
-        to {
-            opacity: 1;
-            transform: scale(1);
-        }
-    }
-
-    @keyframes resultSweep {
-
-        0%,
-        45% {
-            transform:
-                translateX(-120%);
-        }
-
-        70%,
-        100% {
-            transform:
-                translateX(120%);
-        }
-    }
-
-    .result-icon {
-
-        font-size: 65px;
-
-        margin-bottom: 8px;
-
-        filter:
-            drop-shadow(
-                0 0 18px rgba(255,255,255,.12)
-            );
-
-        animation:
-            iconFloat 3s ease-in-out infinite;
-    }
-
-    @keyframes iconFloat {
-
-        0%,
-        100% {
-            transform:
-                translateY(0)
-                scale(1);
-        }
-
-        50% {
-            transform:
-                translateY(-5px)
-                scale(1.03);
-        }
-    }
-
-    .result-title {
-
-        font-size: 30px;
-
-        font-weight: 800;
-
-        color: white;
-    }
-
-    .confidence {
-
-        color: #aab3cf;
-
-        font-size: 17px;
-
-        margin-top: 8px;
-    }
-
-
-    /* =====================================================
-       PROBABILITY CARDS
-       ===================================================== */
-
-    .metric-card {
-
-        text-align: center;
-
-        padding: 20px;
-
-        border-radius: 18px;
-
-        transition:
-            transform 0.25s ease,
-            box-shadow 0.25s ease,
-            border-color 0.25s ease;
-
-        position: relative;
-
-        overflow: hidden;
-    }
-
-    .metric-card:hover {
-
-        transform:
-            translateY(-6px)
-            scale(1.015);
-
-        border-color:
-            rgba(129,140,248,.30);
-
-        box-shadow:
-            0 18px 40px rgba(0,0,0,.28),
-            0 0 25px rgba(99,102,241,.08);
-    }
-
-    .metric-value {
-
-        font-size: 28px;
-
-        font-weight: 800;
-
-        color: white;
-
-        text-shadow:
-            0 0 18px rgba(165,180,252,.18);
-    }
-
-    .metric-label {
-
-        color: #aab3cf;
-
-        font-size: 14px;
-
-        margin-top: 5px;
-    }
-
-
-    /* =====================================================
-       SIDEBAR
-       ===================================================== */
-
-    section[data-testid="stSidebar"] {
-
-        background:
-            radial-gradient(
-                circle at 15% 8%,
-                rgba(99,102,241,.14),
-                transparent 28%
-            ),
-            radial-gradient(
-                circle at 90% 72%,
-                rgba(6,182,212,.10),
-                transparent 30%
-            ),
-            linear-gradient(
-                160deg,
-                rgba(7,12,28,.99),
-                rgba(11,17,36,.95)
-            ) !important;
-
-        border-right:
-            1px solid rgba(129,140,248,.16);
-
-        box-shadow:
-            18px 0 50px rgba(0,0,0,.20);
-
-        position: relative;
-
-        overflow: hidden;
-    }
-
-    section[data-testid="stSidebar"]::before {
-
-        content: "";
-
-        position: absolute;
-
-        width: 280px;
-        height: 280px;
-
-        left: -165px;
-        top: 30%;
-
-        border-radius: 50%;
-
-        background:
-            rgba(99,102,241,.13);
-
-        filter: blur(70px);
-
-        animation:
-            sideGlow 8s ease-in-out infinite;
-
-        pointer-events: none;
-    }
-
-    section[data-testid="stSidebar"]::after {
-
-        content: "";
-
-        position: absolute;
-
-        inset: 0;
-
-        background:
-            linear-gradient(
-                115deg,
-                transparent 0%,
-                rgba(255,255,255,.035) 48%,
-                transparent 56%
-            );
-
-        transform:
-            translateX(-120%);
-
-        animation:
-            sideSweep 9s ease-in-out infinite;
-
-        pointer-events: none;
-    }
-
-    @keyframes sideGlow {
-
-        0%,
-        100% {
-            transform:
-                translate(0,0)
-                scale(1);
-
-            opacity: .55;
-        }
-
-        50% {
-
-            transform:
-                translate(85px,-30px)
-                scale(1.18);
-
-            opacity: 1;
-        }
-    }
-
-    @keyframes sideSweep {
-
-        0%,
-        64% {
-            transform:
-                translateX(-120%);
-        }
-
-        82%,
-        100% {
-            transform:
-                translateX(120%);
-        }
-    }
-
-    section[data-testid="stSidebar"] > div:first-child {
-
-        position: relative;
-
-        z-index: 2;
-    }
-
-
-    /* =====================================================
-       SIDEBAR BRAND
-       ===================================================== */
-
-    .sidebar-brand {
-
-        display: flex;
-
-        align-items: center;
-
-        gap: 12px;
-
-        padding:
-            8px 2px 24px 2px;
-    }
-
-    .sidebar-logo {
-
-        width: 44px;
-        height: 44px;
-
-        display: flex;
-
-        align-items: center;
-
-        justify-content: center;
-
-        border-radius: 14px;
-
-        background:
-            linear-gradient(
-                135deg,
-                rgba(99,102,241,.25),
-                rgba(6,182,212,.18)
-            );
-
-        border:
-            1px solid rgba(129,140,248,.25);
-
-        font-size: 22px;
-
-        box-shadow:
-            0 8px 25px rgba(99,102,241,.15);
-    }
-
-    .sidebar-title {
-
-        font-size: 21px;
-
-        font-weight: 800;
-
-        color: #ffffff;
-
-        letter-spacing: -.02em;
-    }
-
-    .sidebar-subtitle {
-
-        margin-top: 3px;
-
-        color: #7dd3fc;
-
-        font-size: 8px;
-
-        font-weight: 800;
-
-        letter-spacing: .16em;
-    }
-
-
-    /* =====================================================
-       SIDEBAR TEXT
-       ===================================================== */
-
-    .sidebar-text {
-
-        color: #aeb9d2;
-
-        line-height: 1.7;
-
-        font-size: 13.5px;
-    }
-
-    section[data-testid="stSidebar"] hr {
-
-        border: 0;
-
-        height: 1px;
-
-        background:
-            linear-gradient(
-                90deg,
-                transparent,
-                rgba(129,140,248,.32),
-                rgba(6,182,212,.20),
-                transparent
-            );
-
-        margin: 18px 0;
-    }
-
-    section[data-testid="stSidebar"] h3 {
-
-        color: #e2e8f0 !important;
-
-        font-size: 14px !important;
-
-        letter-spacing: .04em;
-    }
-
-
-    /* =====================================================
-       SIDEBAR SECTIONS
-       ===================================================== */
-
-    .side-section {
-
-        padding: 17px 0;
-
-        border-top:
-            1px solid rgba(148,163,184,.10);
-    }
-
-    .side-heading {
-
-        color: #e2e8f0;
-
-        font-size: 13px;
-
-        font-weight: 700;
-
-        letter-spacing: .04em;
-
-        margin-bottom: 10px;
-    }
-
-    .side-description {
-
-        color: #94a3b8;
-
-        font-size: 12px;
-
-        line-height: 1.7;
-    }
-
-
-    /* =====================================================
-       TECHNOLOGY CHIPS
-       ===================================================== */
-
-    .tech-grid {
-
-        display: flex;
-
-        flex-wrap: wrap;
-
-        gap: 7px;
-    }
-
-    .tech-chip {
-
-        display: inline-block;
-
-        padding: 6px 9px;
-
-        border-radius: 8px;
-
-        background:
-            rgba(99,102,241,.08);
-
-        border:
-            1px solid rgba(129,140,248,.14);
-
-        color: #cbd5e1;
-
-        font-size: 10px;
-
-        font-weight: 600;
-
-        transition:
-            all .25s ease;
-    }
-
-    .tech-chip:hover {
-
-        background:
-            rgba(99,102,241,.16);
-
-        border-color:
-            rgba(129,140,248,.30);
-
-        transform:
-            translateY(-2px);
-    }
-
-
-    /* =====================================================
-       MODEL STATS
-       ===================================================== */
-
-    .model-grid {
-
-        display: grid;
-
-        grid-template-columns:
-            1fr 1fr;
-
-        gap: 8px;
-    }
-
-    .model-stat {
-
-        padding: 11px 9px;
-
-        text-align: center;
-
-        border-radius: 11px;
-
-        background:
-            rgba(15,23,42,.55);
-
-        border:
-            1px solid rgba(148,163,184,.10);
-
-        transition:
-            all .25s ease;
-    }
-
-    .model-stat.wide {
-
-        grid-column:
-            span 2;
-    }
-
-    .model-stat:hover {
-
-        transform:
-            translateY(-2px);
-
-        border-color:
-            rgba(129,140,248,.25);
-    }
-
-    .model-value {
-
-        color: #e0e7ff;
-
-        font-size: 17px;
-
-        font-weight: 800;
-    }
-
-    .model-label {
-
-        margin-top: 3px;
-
-        color: #64748b;
-
-        font-size: 9px;
-
-        text-transform:
-            uppercase;
-
-        letter-spacing: .08em;
-    }
-
-
-    /* =====================================================
-       DEVELOPER CARD
-       ===================================================== */
-
-    .developer-card {
-
-        margin-top: 17px;
-
-        padding: 15px;
-
-        border-radius: 15px;
-
-        background:
-            linear-gradient(
-                145deg,
-                rgba(99,102,241,.11),
-                rgba(6,182,212,.06)
-            );
-
-        border:
-            1px solid rgba(129,140,248,.17);
-
-        box-shadow:
-            0 10px 30px rgba(0,0,0,.18);
-
-        transition:
-            all .3s ease;
-    }
-
-    .developer-card:hover {
-
-        transform:
-            translateY(-3px);
-
-        border-color:
-            rgba(129,140,248,.32);
-
-        box-shadow:
-            0 15px 35px rgba(99,102,241,.12);
-    }
-
-    .developer-heading {
-
-        color: #c7d2fe;
-
-        font-size: 11px;
-
-        font-weight: 800;
-
-        letter-spacing: .08em;
-
-        text-transform:
-            uppercase;
-
-        margin-bottom: 14px;
-    }
-
-    .developer-name {
-
-        color: #f1f5f9;
-
-        font-size: 12px;
-
-        font-weight: 700;
-    }
-
-    .developer-roll {
-
-        color: #64748b;
-
-        font-size: 10px;
-
-        margin-top: 3px;
-    }
-
-    .developer-divider {
-
-        height: 1px;
-
-        margin: 11px 0;
-
-        background:
-            linear-gradient(
-                90deg,
-                transparent,
-                rgba(129,140,248,.25),
-                transparent
-            );
-    }
-
-
-    /* =====================================================
-       EXAMPLE PANEL
-       ===================================================== */
-
-    .example-panel {
-
-        margin-top: 6px;
-
-        margin-bottom: 18px;
-
-        padding: 16px 18px;
-
-        border:
-            1px solid rgba(148,163,184,.13);
-
-        border-radius: 16px;
-
-        background:
-            rgba(2,6,23,.35);
-    }
-
-    .example-label {
-
-        color: #94a3b8;
-
-        font-size: 12px;
-
-        letter-spacing: .08em;
-
-        text-transform:
-            uppercase;
-
-        font-weight: 700;
-
-        margin-bottom: 10px;
-    }
-
-    .example-chip {
-
-        display: inline-block;
-
-        margin: 4px 6px 4px 0;
-
-        padding: 7px 11px;
-
-        border-radius: 999px;
-
-        border:
-            1px solid rgba(129,140,248,.18);
-
-        background:
-            rgba(99,102,241,.07);
-
-        color: #cbd5e1;
-
-        font-size: 12px;
-    }
-
-
-    /* =====================================================
-       FOOTER
-       ===================================================== */
-
-    .footer {
-
-        text-align: center;
-
-        color: #717b98;
-
-        font-size: 13px;
-
-        padding: 35px 0 10px 0;
-
-        opacity: .72;
-
-        letter-spacing: .03em;
-    }
-
-
-    /* =====================================================
-       HIDE STREAMLIT DEFAULT UI
-       ===================================================== */
-
-    #MainMenu {
-        visibility: hidden;
-    }
-
-    footer {
-        visibility: hidden;
-    }
-
-    header {
-        background: transparent !important;
-    }
-
-    </style>
-    """,
-    unsafe_allow_html=True
-)
-
-
-# =========================================================
-# LOAD MODEL
-# =========================================================
 
 @st.cache_resource
 def load_model():
@@ -1274,470 +28,554 @@ def load_model():
 model, word_vectorizer, char_vectorizer = load_model()
 
 
-# =========================================================
-# SIDEBAR
-# =========================================================
+PAGES = [
+    "Overview",
+    "Sentiment Trends",
+    "Sentiment Distribution",
+    "Model Confidence",
+    "Analyze Text",
+    "Analysis History",
+    "Model Information",
+]
 
-# =========================================================
-# SIDEBAR
-# =========================================================
+EXAMPLES = [
+    ("Positive", "I absolutely love this product. The quality is outstanding!"),
+    ("Negative", "This experience was terrible and extremely disappointing."),
+    ("Neutral", "The meeting is scheduled for tomorrow afternoon."),
+]
 
-with st.sidebar:
+EVALUATION = {
+    "accuracy": 66.47,
+    "test_samples": 9123,
+    "classes": {
+        "negative": {"precision": 0.48, "recall": 0.64, "f1": 0.55, "support": 1419},
+        "neutral": {"precision": 0.70, "recall": 0.65, "f1": 0.67, "support": 4134},
+        "positive": {"precision": 0.73, "recall": 0.69, "f1": 0.71, "support": 3570},
+    },
+    "confusion_matrix": [
+        [908, 361, 150],
+        [696, 2677, 761],
+        [300, 791, 2479],
+    ],
+}
 
-    st.html(
-        """
-        <div class="sidebar-brand">
+if "analysis_text" not in st.session_state:
+    st.session_state.analysis_text = ""
 
-            <div class="sidebar-logo">
-                💬
-            </div>
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
 
-            <div>
+if "analysis_history" not in st.session_state:
+    st.session_state.analysis_history = []
 
-                <div class="sidebar-title">
-                    Sentiment AI
-                </div>
+if "active_page" not in st.session_state:
+    st.session_state.active_page = "Overview"
 
-                <div class="sidebar-subtitle">
-                    AI • NLP • MACHINE LEARNING
-                </div>
 
-            </div>
+history = st.session_state.analysis_history
 
+
+def page_header(section: str, title: str, description: str) -> None:
+    st.markdown(
+        f"""
+        <div class="sa-page-head">
+            <div class="sa-eyebrow">{html.escape(section)}</div>
+            <h1>{html.escape(title)}</h1>
+            <p>{html.escape(description)}</p>
         </div>
-
-
-        <div class="side-section">
-
-            <div class="side-heading">
-                📌 About
-            </div>
-
-            <div class="side-description">
-                AI-powered sentiment analysis that uses
-                Natural Language Processing and Machine
-                Learning to understand the emotion behind text.
-            </div>
-
-        </div>
-
-
-        <div class="side-section">
-
-            <div class="side-heading">
-                🛠️ Technology
-            </div>
-
-            <div class="tech-grid">
-
-                <span class="tech-chip">
-                    🐍 Python
-                </span>
-
-                <span class="tech-chip">
-                    🤖 Machine Learning
-                </span>
-
-                <span class="tech-chip">
-                    📝 TF-IDF
-                </span>
-
-                <span class="tech-chip">
-                    📊 Logistic Regression
-                </span>
-
-                <span class="tech-chip">
-                    🌐 Streamlit
-                </span>
-
-            </div>
-
-        </div>
-
-
-        <div class="side-section">
-
-            <div class="side-heading">
-                🧠 Model
-            </div>
-
-            <div class="model-grid">
-
-                <div class="model-stat">
-
-                    <div class="model-value">
-
-                    </div>
-
-                    <div class="model-label">
-                        Accuracy
-                    </div>
-
-                </div>
-
-
-                <div class="model-stat">
-
-                    <div class="model-value">
-                        3
-                    </div>
-
-                    <div class="model-label">
-                        Classes
-                    </div>
-
-                </div>
-
-
-                <div class="model-stat wide">
-
-                    <div class="model-value">
-                        45,615
-                    </div>
-
-                    <div class="model-label">
-                        Training Samples
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <div class="developer-card">
-
-            <div class="developer-heading">
-                👨‍💻 Developed By
-            </div>
-
-
-            <div class="developer-person">
-
-                <div class="developer-name">
-                    Khaja Ameen Uddin
-                </div>
-
-                <div class="developer-roll">
-                    Roll No: 161024748302
-                </div>
-
-            </div>
-
-        </div>
-        """
+        """,
+        unsafe_allow_html=True,
     )
 
-# =========================================================
-# HERO SECTION
-# =========================================================
 
-st.html(
-    """
-    <div class="hero">
+def section_label(text: str) -> None:
+    st.markdown(
+        f'<div class="sa-section-label">{html.escape(text)}</div>',
+        unsafe_allow_html=True,
+    )
 
-        <div class="hero-badge">
-            🤖 AI POWERED SENTIMENT ANALYSIS
+
+def metric_card(label: str, value: str, note: str) -> None:
+    st.markdown(
+        f"""
+        <div class="sa-metric-card">
+            <div class="sa-metric-label">{html.escape(label)}</div>
+            <div class="sa-metric-value">{html.escape(value)}</div>
+            <div class="sa-metric-note">{html.escape(note)}</div>
         </div>
-
-        <h1>
-            Understand the Emotion Behind Text
-        </h1>
-
-        <p>
-            Analyze text and discover whether the sentiment
-            is Positive, Neutral, or Negative.
-        </p>
-
-    </div>
-    """
-)
+        """,
+        unsafe_allow_html=True,
+    )
 
 
-# =========================================================
-# INPUT SECTION
-# =========================================================
-
-st.markdown("### ✍️ Enter your text")
-
-
-# =========================================================
-# QUICK EXAMPLES
-# =========================================================
-
-st.html(
-    """
-    <div class="example-panel">
-
-        <div class="example-label">
-            ⚡ Quick examples
-        </div>
-
-        <span class="example-chip">
-            😊 “I absolutely love this product!”
-        </span>
-
-        <span class="example-chip">
-            😞 “This product is terrible and disappointing.”
-        </span>
-
-        <span class="example-chip">
-            😐 “The meeting is scheduled for tomorrow.”
-        </span>
-
-        <span class="example-chip">
-            😊 “The service was excellent and very helpful.”
-        </span>
-
-        <span class="example-chip">
-            😞 “I am unhappy with the quality.”
-        </span>
-
-    </div>
-    """
-)
+def sentiment_counts(records: list) -> dict:
+    counts = {"positive": 0, "neutral": 0, "negative": 0}
+    for record in records:
+        label = str(record["prediction"]).lower()
+        if label in counts:
+            counts[label] += 1
+    return counts
 
 
-# =========================================================
-# TEXT INPUT
-# =========================================================
-
-text = st.text_area(
-    "Enter text for sentiment analysis",
-    placeholder=(
-        "Example: I absolutely love this product. "
-        "It is amazing!"
-    ),
-    height=160,
-    label_visibility="collapsed"
-)
+def average_confidence(records: list) -> float:
+    if not records:
+        return 0.0
+    return sum(float(item["confidence"]) for item in records) / len(records)
 
 
-# =========================================================
-# ANALYZE BUTTON
-# =========================================================
-
-analyze = st.button(
-    "🔍 Analyze Sentiment",
-    use_container_width=True
-)
+def show_empty_state(message: str) -> None:
+    st.markdown(
+        f'<div class="sa-empty"><span>✳</span><p>{html.escape(message)}</p></div>',
+        unsafe_allow_html=True,
+    )
 
 
-# =========================================================
-# ANALYSIS
-# =========================================================
+def render_result(result: dict) -> None:
+    prediction = str(result["prediction"]).lower()
+    confidence = max(0.0, min(100.0, float(result["confidence"])))
+    probabilities = result["probabilities"]
 
-if analyze:
+    symbols = {"positive": "↗", "negative": "↘", "neutral": "—"}
+    descriptions = {
+        "positive": "The model identified positive sentiment in this text.",
+        "negative": "The model identified negative sentiment in this text.",
+        "neutral": "The model identified neutral sentiment in this text.",
+    }
 
-    # -----------------------------------------------------
-    # EMPTY INPUT CHECK
-    # -----------------------------------------------------
+    label = prediction.upper()
+    style = prediction if prediction in symbols else "neutral"
 
-    if text.strip() == "":
-
-        st.warning(
-            "⚠️ Please enter some text before analyzing."
-        )
-
-    else:
-
-        # -------------------------------------------------
-        # LOADING
-        # -------------------------------------------------
-
-        with st.spinner(
-            "🤖 AI is analyzing your text..."
-        ):
-
-            time.sleep(0.8)
-
-
-            prediction, probability_dict, confidence = predict_sentiment(
-                text,
-                model,
-                word_vectorizer,
-                char_vectorizer,
-            )
-
-
-        # =================================================
-        # RESULT INFORMATION
-        # =================================================
-
-        if prediction == "positive":
-
-            icon = "😊"
-
-            title = "POSITIVE"
-
-            description = (
-                "The text expresses a positive sentiment."
-            )
-
-        elif prediction == "negative":
-
-            icon = "😞"
-
-            title = "NEGATIVE"
-
-            description = (
-                "The text expresses a negative sentiment."
-            )
-
-        else:
-
-            icon = "😐"
-
-            title = "NEUTRAL"
-
-            description = (
-                "The text expresses a neutral sentiment."
-            )
-
-
-        # =================================================
-        # RESULT CARD
-        # =================================================
-
-        st.html(
-            f"""
-            <div class="result">
-
-                <div class="result-icon">
-                    {icon}
-                </div>
-
-                <div class="result-title">
-                    {title}
-                </div>
-
-                <div class="confidence">
-
-                    {description}
-
-                    <br>
-                    <br>
-
-                    Confidence:
-                    <b>{confidence:.2f}%</b>
-
-                </div>
-
+    st.markdown(
+        f"""
+        <div class="sa-result-card {style}">
+            <div class="sa-result-top">
+                <span>DETECTED SENTIMENT</span>
+                <span>ANALYSIS COMPLETE</span>
             </div>
-            """
+            <div class="sa-result-main">
+                <div class="sa-result-symbol">{symbols.get(style, "?")}</div>
+                <div class="sa-result-copy">
+                    <div class="sa-result-kicker">YOUR TEXT EXPRESSES</div>
+                    <div class="sa-result-name">{html.escape(label)}</div>
+                    <div class="sa-result-description">{descriptions.get(style, "Prediction completed.")}</div>
+                </div>
+                <div class="sa-result-confidence">
+                    <strong>{confidence:.2f}%</strong>
+                    <span>MODEL CONFIDENCE</span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    st.progress(confidence / 100)
+
+    section_label("CLASS PROBABILITIES")
+    for sentiment in ("positive", "neutral", "negative"):
+        value = max(0.0, min(100.0, float(probabilities.get(sentiment, 0))))
+        st.markdown(
+            f"""
+            <div class="sa-probability">
+                <div><span>{sentiment.capitalize()}</span><strong>{value:.2f}%</strong></div>
+                <div class="sa-probability-track">
+                    <div class="{sentiment}" style="width:{value:.2f}%"></div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
+    with st.expander("View analyzed text"):
+        st.write(result["text"])
 
-        # =================================================
-        # PROBABILITY TITLE
-        # =================================================
 
-        st.html(
-            """
-            <div style="height:18px;"></div>
+# Sidebar navigation
+with st.sidebar:
+    st.markdown(
+        """
+        <div class="sa-brand">
+            <div class="sa-brand-mark">✳</div>
+            <div>
+                <div class="sa-brand-name">sentiment<span>AI</span></div>
+                <div class="sa-brand-caption">INTELLIGENCE WORKSPACE</div>
+            </div>
+        </div>
+        <div class="sa-sidebar-heading">WORKSPACE</div>
+        """,
+        unsafe_allow_html=True,
+    )
 
-            <h3>
-                📊 Sentiment Probability
-            </h3>
-            """
+    selected_page = st.radio(
+        "Dashboard navigation",
+        PAGES,
+        index=PAGES.index(st.session_state.active_page),
+        label_visibility="collapsed",
+        key="dashboard_navigation",
+    )
+    st.session_state.active_page = selected_page
+
+    counts = sentiment_counts(history)
+    st.markdown(
+        """
+        <div class="sa-sidebar-heading">LIVE SESSION</div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f"""
+        <div class="sa-sidebar-stats">
+            <div><strong>{len(history)}</strong><span>Total analyses</span></div>
+            <div><strong>{counts["positive"]}</strong><span>Positive results</span></div>
+        </div>
+        <div class="sa-sidebar-model">
+            <div class="sa-sidebar-heading">MODEL ENGINE</div>
+            <strong>{html.escape(type(model).__name__)}</strong>
+            <p>Word TF-IDF + Character TF-IDF</p>
+            <span>CHARACTER WEIGHT · 1.2</span>
+        </div>
+        <div class="sa-sidebar-status"><i></i> MODEL READY</div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+# Overview
+if selected_page == "Overview":
+    page_header(
+        "01 / WORKSPACE OVERVIEW",
+        "Understand the bigger picture.",
+        "A live view of your sentiment analysis activity and model performance.",
+    )
+
+    counts = sentiment_counts(history)
+    total = len(history)
+    average = average_confidence(history)
+
+    columns = st.columns(4)
+    with columns[0]:
+        metric_card("TOTAL ANALYSES", str(total), "Current session")
+    with columns[1]:
+        metric_card("POSITIVE", str(counts["positive"]), "Session predictions")
+    with columns[2]:
+        metric_card("NEGATIVE", str(counts["negative"]), "Session predictions")
+    with columns[3]:
+        metric_card("AVERAGE CONFIDENCE", f"{average:.1f}%" if total else "—", "Current session")
+
+    st.write("")
+    left, right = st.columns([1.35, 1], gap="large")
+
+    with left:
+        section_label("SESSION ACTIVITY")
+        st.markdown("### Your analysis activity")
+        if history:
+            activity = pd.DataFrame(history)
+            activity["timestamp"] = pd.to_datetime(activity["timestamp"])
+            chart_data = activity.set_index("timestamp")[["confidence"]]
+            st.line_chart(chart_data, height=270)
+        else:
+            show_empty_state("Your activity chart will appear after your first analysis.")
+
+    with right:
+        section_label("SENTIMENT SNAPSHOT")
+        st.markdown("### Current session distribution")
+        if total:
+            st.bar_chart(pd.DataFrame.from_dict(counts, orient="index", columns=["Analyses"]))
+        else:
+            show_empty_state("No sentiment results yet. Start by analyzing a piece of text.")
+
+    section_label("MODEL BENCHMARK")
+    st.markdown("### Evaluation on the held-out test set")
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        metric_card("TEST ACCURACY", "66.47%", "Recorded evaluation")
+    with c2:
+        metric_card("TEST SAMPLES", "9,123", "Held-out examples")
+    with c3:
+        metric_card("SENTIMENT CLASSES", "03", "Positive · Neutral · Negative")
+
+
+# Sentiment Trends
+elif selected_page == "Sentiment Trends":
+    page_header(
+        "02 / TEMPORAL ANALYTICS",
+        "Follow the sentiment.",
+        "Explore how your predictions evolve throughout this active session.",
+    )
+
+    if not history:
+        show_empty_state("No session data yet. Analyze some text to generate your first trend.")
+    else:
+        frame = pd.DataFrame(history)
+        frame["timestamp"] = pd.to_datetime(frame["timestamp"])
+        frame = frame.sort_values("timestamp")
+
+        section_label("CONFIDENCE OVER TIME")
+        st.line_chart(frame.set_index("timestamp")[["confidence"]], height=320)
+
+        section_label("PREDICTION COUNTS")
+        counts = sentiment_counts(history)
+        st.bar_chart(pd.DataFrame.from_dict(counts, orient="index", columns=["Predictions"]))
+
+        st.caption("Charts use actual predictions from this session only. They reset when the session ends.")
+
+
+# Sentiment Distribution
+elif selected_page == "Sentiment Distribution":
+    page_header(
+        "03 / SENTIMENT COMPOSITION",
+        "The balance of emotion.",
+        "See how positive, neutral and negative predictions are distributed in this session.",
+    )
+
+    counts = sentiment_counts(history)
+    total = len(history)
+
+    if not total:
+        show_empty_state("Your distribution will appear after your first sentiment analysis.")
+    else:
+        columns = st.columns(3)
+        for column, sentiment in zip(columns, ("positive", "neutral", "negative")):
+            with column:
+                percentage = counts[sentiment] / total * 100
+                metric_card(sentiment.upper(), str(counts[sentiment]), f"{percentage:.1f}% of session")
+
+        section_label("SESSION DISTRIBUTION")
+        st.bar_chart(pd.DataFrame.from_dict(counts, orient="index", columns=["Predictions"]))
+
+        st.markdown("### Distribution details")
+        for sentiment in ("positive", "neutral", "negative"):
+            value = counts[sentiment]
+            percentage = value / total * 100
+            st.markdown(
+                f"""
+                <div class="sa-distribution-row">
+                    <div><span>{sentiment.capitalize()}</span><strong>{value} · {percentage:.1f}%</strong></div>
+                    <div class="sa-distribution-track"><div class="{sentiment}" style="width:{percentage:.2f}%"></div></div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+
+# Model Confidence
+elif selected_page == "Model Confidence":
+    page_header(
+        "04 / PREDICTION CERTAINTY",
+        "Look closer at confidence.",
+        "Understand the confidence scores returned by your trained classifier.",
+    )
+
+    if not history:
+        show_empty_state("Confidence analytics will appear after you analyze some text.")
+    else:
+        scores = [float(item["confidence"]) for item in history]
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            metric_card("AVERAGE", f"{sum(scores) / len(scores):.2f}%", "Session confidence")
+        with c2:
+            metric_card("HIGHEST", f"{max(scores):.2f}%", "Session maximum")
+        with c3:
+            metric_card("LOWEST", f"{min(scores):.2f}%", "Session minimum")
+
+        section_label("CONFIDENCE BY ANALYSIS")
+        confidence_frame = pd.DataFrame({
+            "Analysis": [f"#{i + 1}" for i in range(len(scores))],
+            "Confidence": scores,
+        }).set_index("Analysis")
+        st.bar_chart(confidence_frame, height=320)
+
+        st.caption("Confidence is the highest class probability returned by the model. It is not a guarantee of correctness.")
+
+
+# Analyze Text
+elif selected_page == "Analyze Text":
+    page_header(
+        "05 / SENTIMENT ANALYSIS",
+        "Read between the emotions.",
+        "Enter a review, comment or sentence and let your trained model analyze its sentiment.",
+    )
+
+    left, right = st.columns([1.55, 1], gap="large")
+
+    with left, st.container(border=True):
+        section_label("INPUT TEXT")
+        st.markdown("### What would you like to understand?")
+        text = st.text_area(
+            "Text for sentiment analysis",
+            placeholder="Start typing or paste your text here...",
+            height=210,
+            key="analysis_text",
+            label_visibility="collapsed",
+        )
+        st.caption(f"{len(text)} characters · English text works best with this model.")
+
+        if st.button("Analyze sentiment  →", type="primary", use_container_width=True):
+            if not text.strip():
+                st.warning("Please enter some text before analyzing.")
+            else:
+                try:
+                    with st.spinner("Analyzing language patterns..."):
+                        prediction, probabilities, confidence = predict_sentiment(
+                            text, model, word_vectorizer, char_vectorizer
+                        )
+
+                    result = {
+                        "text": text,
+                        "prediction": str(prediction).lower(),
+                        "probabilities": probabilities,
+                        "confidence": float(confidence),
+                    }
+                    st.session_state.analysis_result = result
+                    history.append({
+                        **result,
+                        "timestamp": datetime.now().isoformat(timespec="seconds"),
+                    })
+                    st.success("Analysis completed and added to session history.")
+                except Exception as error:  # noqa: BLE001
+                    st.error(f"Analysis could not be completed: {error}")
+
+    with right, st.container(border=True):
+            section_label("QUICK START")
+            st.markdown("### Explore with examples")
+            st.caption("Choose an example to load it into the analysis field.")
+            for label, example in EXAMPLES:
+                if st.button(f"Load {label.lower()} example", use_container_width=True, key=f"load_{label}"):
+                    st.session_state.analysis_text = example
+                    st.rerun()
+
+            st.markdown("---")
+            st.markdown("**Three sentiment dimensions**")
+            st.markdown(
+                '<div class="sa-class-tags"><span class="positive">Positive</span>'
+                '<span class="neutral">Neutral</span><span class="negative">Negative</span></div>',
+                unsafe_allow_html=True,
+            )
+            st.caption("Predictions are generated by your trained word and character TF-IDF model.")
+
+    result = st.session_state.analysis_result
+    if result:
+        st.write("")
+        section_label("LATEST RESULT")
+        render_result(result)
+
+
+# Analysis History
+elif selected_page == "Analysis History":
+    page_header(
+        "06 / SESSION RECORDS",
+        "Your analysis history.",
+        "Review, inspect and export predictions made during this active session.",
+    )
+
+    if not history:
+        show_empty_state("Your analysis history is empty. Your completed analyses will appear here.")
+    else:
+        counts = sentiment_counts(history)
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            metric_card("TOTAL RECORDS", str(len(history)), "This session")
+        with c2:
+            metric_card("POSITIVE", str(counts["positive"]), "Recorded predictions")
+        with c3:
+            metric_card("NEGATIVE", str(counts["negative"]), "Recorded predictions")
+
+        frame = pd.DataFrame(history).copy()
+        frame["text_preview"] = frame["text"].astype(str).str.slice(0, 100)
+        display = frame[["timestamp", "text_preview", "prediction", "confidence"]].rename(
+            columns={
+                "timestamp": "Timestamp",
+                "text_preview": "Analyzed text",
+                "prediction": "Sentiment",
+                "confidence": "Confidence (%)",
+            }
+        )
+        st.dataframe(display.iloc[::-1], use_container_width=True, hide_index=True)
+
+        csv_data = frame[["timestamp", "text", "prediction", "confidence"]].to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "Export session history as CSV",
+            data=csv_data,
+            file_name="sentiment_ai_session_history.csv",
+            mime="text/csv",
+            type="primary",
         )
 
-
-        # =================================================
-        # PROBABILITY CARDS
-        # =================================================
-
-        col1, col2, col3 = st.columns(3)
+        if st.button("Clear session history", type="secondary"):
+            st.session_state.analysis_history = []
+            st.session_state.analysis_result = None
+            st.rerun()
 
 
-        # -------------------------------------------------
-        # POSITIVE
-        # -------------------------------------------------
+# Model Information
+elif selected_page == "Model Information":
+    page_header(
+        "07 / MODEL INTELLIGENCE",
+        "Know the engine.",
+        "Technical details and recorded evaluation results for your sentiment classifier.",
+    )
 
-        with col1:
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        metric_card("TEST ACCURACY", "66.47%", "Held-out evaluation")
+    with c2:
+        metric_card("TEST SAMPLES", "9,123", "Evaluation support")
+    with c3:
+        metric_card("CLASS COUNT", "3", "Model output classes")
 
-            st.html(
-                f"""
-                <div class="metric-card">
+    section_label("MODEL ARCHITECTURE")
+    st.markdown("### Hybrid TF-IDF + Logistic Regression")
+    details = [
+        ("Classifier", type(model).__name__),
+        ("Word vectorizer", type(word_vectorizer).__name__),
+        ("Character vectorizer", type(char_vectorizer).__name__),
+        ("Character feature weight", "1.2"),
+        ("Prediction interface", "predict + predict_proba"),
+    ]
+    for label, value in details:
+        st.markdown(
+            f'<div class="sa-detail-row"><span>{html.escape(label)}</span><strong>{html.escape(str(value))}</strong></div>',
+            unsafe_allow_html=True,
+        )
 
-                    <div class="metric-value">
-                        {probability_dict.get("positive", 0):.2f}%
-                    </div>
+    word_features = len(getattr(word_vectorizer, "vocabulary_", {}))
+    char_features = len(getattr(char_vectorizer, "vocabulary_", {}))
+    c1, c2 = st.columns(2)
+    with c1:
+        metric_card("WORD FEATURES", f"{word_features:,}", "Learned vocabulary size")
+    with c2:
+        metric_card("CHARACTER FEATURES", f"{char_features:,}", "Learned vocabulary size")
 
-                    <div class="metric-label">
-                        😊 Positive
-                    </div>
+    section_label("CLASSIFICATION REPORT")
+    report_rows = []
+    for label, values in EVALUATION["classes"].items():
+        report_rows.append({
+            "Class": label.capitalize(),
+            "Precision": values["precision"],
+            "Recall": values["recall"],
+            "F1 score": values["f1"],
+            "Support": values["support"],
+        })
+    st.dataframe(pd.DataFrame(report_rows), use_container_width=True, hide_index=True)
 
-                </div>
-                """
-            )
+    section_label("CONFUSION MATRIX")
+    matrix = pd.DataFrame(
+        EVALUATION["confusion_matrix"],
+        index=["Actual negative", "Actual neutral", "Actual positive"],
+        columns=["Predicted negative", "Predicted neutral", "Predicted positive"],
+    )
+    st.dataframe(matrix, use_container_width=True)
 
-
-        # -------------------------------------------------
-        # NEUTRAL
-        # -------------------------------------------------
-
-        with col2:
-
-            st.html(
-                f"""
-                <div class="metric-card">
-
-                    <div class="metric-value">
-                        {probability_dict.get("neutral", 0):.2f}%
-                    </div>
-
-                    <div class="metric-label">
-                        😐 Neutral
-                    </div>
-
-                </div>
-                """
-            )
-
-
-        # -------------------------------------------------
-        # NEGATIVE
-        # -------------------------------------------------
-
-        with col3:
-
-            st.html(
-                f"""
-                <div class="metric-card">
-
-                    <div class="metric-value">
-                        {probability_dict.get("negative", 0):.2f}%
-                    </div>
-
-                    <div class="metric-label">
-                        😞 Negative
-                    </div>
-
-                </div>
-                """
-            )
+    st.caption("Evaluation values are taken from model_evaluation.txt. Session analytics are separate from these test-set metrics.")
 
 
-# =========================================================
-# FOOTER
-# =========================================================
-
-st.html(
+st.markdown(
     """
-    <div class="footer">
-
-        Sentiment Analysis Using Machine Learning
-
-        <div style="margin-top: 10px;">
-            CSE / AIML • NSAKCET
-        </div>
-
-        <div style="margin-top: 10px; font-size: 12px;">
-            Developed by Khaja Ameen Uddin
-        </div>
-
+    <div class="sa-footer">
+        <span>SENTIMENT AI</span>
+        <span>Machine Learning · Natural Language Processing</span>
+        <span>NSAKCET</span>
     </div>
-    """
+    """,
+    unsafe_allow_html=True,
 )
