@@ -262,6 +262,9 @@ if selected_page == "Overview":
     with columns[3]:
         metric_card("AVERAGE CONFIDENCE", f"{average:.1f}%" if total else "—", "Current session")
 
+    if st.button("Analyze New Text", key="overview_analyze", type="primary", use_container_width=True):
+        st.session_state.active_page = "Analyze Text"
+        st.rerun()
     st.write("")
     left, right = st.columns([1.35, 1], gap="large")
 
